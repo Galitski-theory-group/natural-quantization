@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "natural_quantization"
 description = "natural-quantization in qiskit for quantum computer"
 authors = [ {name="Djamil Lakhdar-Hamina", email = "dlakhdar@umd.edu"} ,
-            {name="", email=""}]
+            {name="Richard Barney", email="rbarney@umd.edu"}]
 
 version = "0.0.0"
 requires-python = ">=3.10"
