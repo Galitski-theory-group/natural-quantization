@@ -22,10 +22,13 @@ classifiers = [
 
 dependencies = [
     "ipykernel",
+    "matplotlib",
     "numpy",
     "qiskit",
     "qiskit-ibm-runtime",
-    "qiskit-ibm-transpiler"
+    "qiskit-ibm-transpiler",
+    "qiskit[visualization]",
+    "qiskit-aer"
 ]
 
 [project.license]
