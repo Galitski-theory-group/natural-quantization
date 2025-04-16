@@ -182,7 +182,11 @@ class QuantumNeuralNetwork:
         # take classical steps
         zs = self.weights[0] @ input
         for i in range(1, len(self.weights) - 1):
-            θ = np.pi / 2 * (zs - self.activation_f(self.weights[i] @ zs, quantumness))
+            θ = (
+                np.pi / 2 * (1 - self.activation_f(self.weights[i] @ zs, quantumness))
+                if i > 1
+                else np.pi / 2 * (1 - self.activation_f(zs, quantumness))
+            )
             n_qbits = self.weights[i].shape[0]
             qr = QuantumRegister(n_qbits, name="qr")
             cr = ClassicalRegister(n_qbits, name="cr")
