@@ -24,6 +24,8 @@ dependencies = [
     "ipykernel",
     "matplotlib",
     "numpy",
+    "numba",
+    "tensorflow",
     "qiskit",
     "qiskit-ibm-runtime",
     "qiskit-ibm-transpiler",
