@@ -1,15 +1,17 @@
+import json
 
+import numpy as np
 import tensorflow as tf
-import numpy as np 
-import json 
-from numba import njit, int32, int64, float32, float64
+from numba import float32, float64, int32, int64, njit
 
 fire = 1
 output_length = 10
 
+
 @njit
 def magnitude(x: np.ndarray) -> int | float:
     return np.sqrt(np.sum(x**2))
+
 
 @njit
 def max_normalize(data: np.ndarray):
@@ -85,7 +87,7 @@ def prepare_data(
     return x_train, y_train, x_test, y_test
 
 
-def read_weights(file, weight_label: str = "last_params") ->list[np.ndarray[:,:]]:
+def read_weights(file, weight_label: str = "last_params") -> list[np.ndarray[:, :]]:
     with open(file) as f:
         data = json.load(f)
 
