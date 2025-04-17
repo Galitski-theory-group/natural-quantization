@@ -4,3 +4,4 @@
 *.pytest*
 *data
 *.qnn
+build 

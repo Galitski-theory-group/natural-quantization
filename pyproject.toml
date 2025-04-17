@@ -63,8 +63,8 @@ test = [
 file = "README.md"
 content-type = "text/markdown"
 
-[project.scripts]
-natural_quantization = "natural_quantization.__main__:main"
+#[project.scripts]
+#natural_quantization = "natural_quantization.__main__:main"
 
 [tool.isort]
 profile = "black"
@@ -135,4 +135,4 @@ dist_glob_patterns = ["dist/*"]
 upload_to_vcs_release = true
 
 [tool.setuptools.package-dir]
-natural_quantization = "src"
+""="src"
