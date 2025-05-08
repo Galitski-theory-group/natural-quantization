@@ -2,6 +2,5 @@
 *egg*
 *__pycache__
 *.pytest*
-*data
 *.qnn
 build 
