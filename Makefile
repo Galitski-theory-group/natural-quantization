@@ -1,6 +1,6 @@
 .ONESHELL: # Applies to every target in the file!
 
-PYTHON_VERSION ?= $(shell python3 -c "import sys;print('{}.{}'.format(*sys.version_info[:2]))")
+PYTHON_VERSION ?= $(shell compgen -c python | sort -V | uniq | grep -E '^python[0-9]+\.[0-9]+$$' | tail -n 1 | cut -c7-)
 
 # name
 .qnn:
