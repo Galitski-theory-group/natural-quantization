@@ -1,12 +1,9 @@
 import json
-
 import numpy as np
-import tensorflow as tf
 from numba import float32, float64, int32, int64, njit
 
 fire = 1
 output_length = 10
-
 
 @njit
 def magnitude(x: np.ndarray) -> int | float:
@@ -18,30 +15,31 @@ def max_normalize(data: np.ndarray):
     return data / np.max(data)
 
 
-@njit
 def gaussian_normalize(data: np.ndarray):
     return (data - np.mean(data, axis=0)) / (np.std(data, axis=0) + 1e-8)
 
 
-def hot_encode(x: np.ndarray, output_length: (int | float)) -> np.ndarray:
+def one_hot(digit: int, length: int = 10) -> np.ndarray:
     """
-    Converts an array of integer indices into one-hot encoded vectors.
-
-    Parameters:
-        x (np.array): Array of integer indices.
-        output_length (int): Length of the one-hot encoded vectors.
-
-    Returns:
-        np.array: A 2D array where each row is a one-hot encoded vector
-        corresponding to the input indices.
+    Return a one‑hot vector of given length with a 1 at position `digit`.
+    
+    Parameters
+    ----------
+    digit : int
+        An integer between 0 and length‑1 inclusive.
+    length : int
+        Size of the output vector (default 10).
+        
+    Returns
+    -------
+    np.ndarray
+        One‑hot encoded vector of shape (length,).
     """
-    tmp = []
-    for index in x:
-        x_vec = np.zeros(output_length)
-        x_vec[int(index)] = fire
-        tmp.append(x_vec.reshape((output_length)))
-    return np.array(tmp)
-
+    if not (0 <= digit < length):
+        raise ValueError(f"digit must be in [0, {length-1}]")
+    vec = np.zeros(length, dtype=int)
+    vec[digit] = 1
+    return vec
 
 def prepare_data(
     dataset: "tf.keras.datasets" = "mnist", normalize_scheme: callable = max_normalize
