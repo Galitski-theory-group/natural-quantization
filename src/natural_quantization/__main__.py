@@ -1,29 +1,36 @@
-
-import json 
-import numpy as np 
-import os 
 import datetime
-from qiskit_ibm_runtime.fake_provider import FakeKyiv
-from natural_quantization.quantum_neuralnet import QuantumNeuralNetwork
-from natural_quantization.preprocess import one_hot,read_weights
-from natural_quantization.activations import htanh
+import json
+import os
 
-WORKING_DIR="/scratch/zt1/project/galitski-prj/user/dlakhdar/repos/natural-quantization"
+import numpy as np
+from qiskit_ibm_runtime.fake_provider import FakeKyiv
+
+from natural_quantization.activations import htanh
+from natural_quantization.preprocess import read_weights
+from natural_quantization.quantum_neuralnet import QuantumNeuralNetwork
+
+WORKING_DIR = "/Users/dlakhdar/physics/copy_repos/natural-quantization"
+As = [0.0, 0.1, 0.2, 0.5, 1.0, 1.5, 2.0, 5.0]
+WIDTHS = [16]
+INDICES = [6929]
+N_SAMPLES = 96
+N_INSTANCES_PER_BLOCK = 6
+
 
 def run_experiment(
     inputs: list[np.ndarray[:]],
-    data_directory: str = f"{WORKING_DIR}/data/zaratan",
+    data_directory: str = f"{WORKING_DIR}/data",
     a_values: list[float] = [0.0, 0.1, 0.2, 0.5, 1.0],
     layer_widths: list[int] = [16],
     input_n: int = 784,
     output_n: int = 10,
     simulation_mode: bool = True,
     save_bitstring_to: bool = False,
-    verbose: bool = False,
-    save_results_to: str = f"{WORKING_DIR}/data/zaratan/tmp.json",
+    save_results_to: str = f"{WORKING_DIR}/data/experiment_data/tmp.json",
     n_samples: int = 10,
     n_instances_per_block: int = 1,
-    n_blocks:int = None,
+    n_blocks: int = None,
+    optimization_level: int = 0,
 ) -> list[tuple[int, int, list[list]]]:
     """
 
@@ -39,7 +46,7 @@ def run_experiment(
     for a in a_values:
         for width in layer_widths:
             fname = (
-                f"mnist_a{a}_lr-2_shots20_width{width}.json"
+                f"quantum_nn_rotation_angles/mnist_a{a}_lr-2_shots20_width{width}.json"
             )
             path = os.path.join(data_directory, fname)
             setup.append((path, a, width))
@@ -59,16 +66,18 @@ def run_experiment(
 
         # ensure IBM connection
         qnn.establish_communication_with_ibm(
-            simulation_mode=simulation_mode, simulator=FakeKyiv(), operational=True
+            simulation_mode=simulation_mode,
+            simulator=FakeKyiv(),
+            operational=True,
+            optimization_level=optimization_level,
         )
 
         # run predictions
-        results = qnn.predict(
+        results = qnn.sample_block_predict(
             inputs,
             quantumness=a,
             n_samples=n_samples,
-            n_instances_per_block=n_instances_per_block,
-            verbose=verbose,
+            n_samples_per_block=n_instances_per_block,
             save_results_to=save_results_to,
             save_bitstring_to=save_bitstring_to,
         )
@@ -76,33 +85,46 @@ def run_experiment(
 
     return setup_results
 
-if __name__ == "__main__":
 
-    with open(f"{WORKING_DIR}/data/zaratan/mnist_data_reduced.json") as f :
+def main():
+    with open(f"{WORKING_DIR}/data/mnist_data/mnist_data_reduced.json") as f:
         data = json.load(f)
 
-    test_set =  data["test_set"]
-    print(f"data:\n {test_set[0][0]}")
-    x_test, y_test = [np.array(d[0]) for d in test_set], [one_hot(d[1]) for d in test_set]
-    indices = [0,1,2,3,4,7,11,15,18,30,]
-    # index 0 -> 7, index, index 1 ->2, index 2 ->1 , index 3 -> 0 , index 4 -> 4 , index 7 -> 9
-    # index 11 -> 6, index 15 -> 5, index 18 -> 8
-    x_test_sample = [x_test[index] for index in indices]
-    y_test_sample = [y_test[index] for index in indices]
+    test_set = data["test_set"]
+    # print(f"data:\n {test_set[0][0]}")
+    x_test = [np.array(d[0]) for d in test_set]
+    # indices = [0, 1, 2, 3, 4, 7, 11, 15, 18,
+    #            30, 0, 1]
+
+    indices = INDICES
+    # index 0 -> 7, index, index 1 ->2, index 2 ->1 , index 3 -> 0 ,
+    # index 4 -> 4 , index 7 -> 9
+    # index 11 -> 6, index 15 -> 5, index 18 -> 8, index 30 -> 3
+    x_test_sample, _ = [x_test[index] for index in indices]
 
     date = datetime.datetime.now()
-    date = str(date).replace(" ","_")
+    date = str(date).replace(" ", "_")
 
-    results = run_experiment(x_test_sample,
-                             a_values=[.5],
-                            layer_widths=[16],
-                            verbose=True, 
-                            simulation_mode=True, 
-                            n_samples=5,
-                            n_instances_per_block=2,
-                            save_bitstring_to=f"{WORKING_DIR}/data/zaratan/{date}_qubits_tmp.json",
-                            save_results_to=f"{WORKING_DIR}/data/zaratan/{date}_tmp_results.json")
+    results = run_experiment(
+        x_test_sample,
+        a_values=As,
+        layer_widths=WIDTHS,
+        simulation_mode=False,
+        n_samples=N_SAMPLES,
+        n_instances_per_block=N_INSTANCES_PER_BLOCK,
+        save_bitstring_to=f"{WORKING_DIR}/data/experiment_data/\
+        {date}_qubits_tmp.json",
+        save_results_to=f"{WORKING_DIR}/data/experiment_data/\
+        {date}_tmp_results.json",
+    )
+
+    with open(
+        f"{WORKING_DIR}/data/\
+              experiment_data/{date}_results.txt",
+        "w",
+    ) as f:
+        print(results, file=f)
 
 
-    with open(f"{WORKING_DIR}/data/zaratan/{date}_results.txt", "w") as f1, open(f"{WORKING_DIR}/data/zaratan/{date}_results.json","w") as f2:
-        print(results, file=f1); json.dumps(results,f2)
+if __name__ == "__main__":
+    main()
