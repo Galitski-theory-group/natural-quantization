@@ -1,16 +1,15 @@
 import json
+
 import numpy as np
-from numba import float32, float64, int32, int64, njit
 
 fire = 1
 output_length = 10
 
-@njit
+
 def magnitude(x: np.ndarray) -> int | float:
     return np.sqrt(np.sum(x**2))
 
 
-@njit
 def max_normalize(data: np.ndarray):
     return data / np.max(data)
 
@@ -22,14 +21,14 @@ def gaussian_normalize(data: np.ndarray):
 def one_hot(digit: int, length: int = 10) -> np.ndarray:
     """
     Return a one‑hot vector of given length with a 1 at position `digit`.
-    
+
     Parameters
     ----------
     digit : int
         An integer between 0 and length‑1 inclusive.
     length : int
         Size of the output vector (default 10).
-        
+
     Returns
     -------
     np.ndarray
@@ -41,52 +40,80 @@ def one_hot(digit: int, length: int = 10) -> np.ndarray:
     vec[digit] = 1
     return vec
 
-def prepare_data(
-    dataset: "tf.keras.datasets" = "mnist", normalize_scheme: callable = max_normalize
-) -> tuple[np.ndarray]:
-    """
-    Prepares and preprocesses a dataset for training and testing.
 
-    Parameters:
-        dataset (str): Name of the dataset to load from tf.keras.datasets (default: 'mnist').
-        normalize_scheme (function): Function to normalize the dataset
-        (default: max_normalize).
+# def prepare_data(
+#     dataset: "tf.keras.datasets" = "mnist", normalize_scheme: callable = max_normalize
+# ) -> tuple[np.ndarray]:
+#     """
+#     Prepares and preprocesses a dataset for training and testing.
 
-    Returns:
-        tuple: Preprocessed training and testing data:
-            - x_train (np.array): Flattened and normalized training input data.
-            - y_train (np.array): One-hot encoded training labels.
-            - x_test (np.array): Flattened and normalized testing input data.
-            - y_test (np.array): One-hot encoded testing labels.
-    """
-    # Dynamically get the dataset
-    try:
-        dataset_module = getattr(tf.keras.datasets, dataset)
-    except AttributeError:
-        raise ValueError(f"Dataset '{dataset}' not found in tf.keras.datasets")
-    (x_train, y_train), (x_test, y_test) = dataset_module.load_data()
-    x_train, y_train = np.array(x_train, dtype=float), np.array(y_train, dtype=float)
+#     Parameters:
+#         dataset (str): Name of the dataset to load from tf.keras.datasets (default: 'mnist').
+#         normalize_scheme (function): Function to normalize the dataset
+#         (default: max_normalize).
 
-    # Take n number of 28*28 matrices and convert them to 784 vectors
-    (r, m, n), (rt, mt, nt) = x_train.shape, x_test.shape
-    dim_x, dim_xt = (r, m * n), (rt, mt * nt)
-    x_train, x_test = x_train.reshape(dim_x), x_test.reshape(dim_xt)
+#     Returns:
+#         tuple: Preprocessed training and testing data:
+#             - x_train (np.array): Flattened and normalized training input data.
+#             - y_train (np.array): One-hot encoded training labels.
+#             - x_test (np.array): Flattened and normalized testing input data.
+#             - y_test (np.array): One-hot encoded testing labels.
+#     """
+#     # Dynamically get the dataset
+#     try:
+#         dataset_module = getattr(tf.keras.datasets, dataset)
+#     except AttributeError:
+#         raise ValueError(f"Dataset '{dataset}' not found in tf.keras.datasets")
+#     (x_train, y_train), (x_test, y_test) = dataset_module.load_data()
+#     x_train, y_train = np.array(x_train, dtype=float), np.array(y_train, dtype=float)
 
-    y_train, y_test = (
-        hot_encode(y_train, output_length),
-        hot_encode(y_test, output_length),
-    )
+#     # Take n number of 28*28 matrices and convert them to 784 vectors
+#     (r, m, n), (rt, mt, nt) = x_train.shape, x_test.shape
+#     dim_x, dim_xt = (r, m * n), (rt, mt * nt)
+#     x_train, x_test = x_train.reshape(dim_x), x_test.reshape(dim_xt)
 
-    # normalize datasets
-    # x_train = (x_train - np.mean(x_train, axis=0)) / (np.std(x_train, axis=0) + 1e-8)
-    # x_test = (x_test - np.mean(x_test, axis=0)) / (np.std(x_test, axis=0) + 1e-8)
-    x_train, x_test = map(normalize_scheme, [x_train, x_test])
+#     y_train, y_test = (
+#         one_hot(y_train, output_length),
+#         one_hot(y_test, output_length),
+#     )
 
-    return x_train, y_train, x_test, y_test
+#     # normalize datasets
+#     # x_train = (x_train - np.mean(x_train, axis=0)) / (np.std(x_train, axis=0) + 1e-8)
+#     # x_test = (x_test - np.mean(x_test, axis=0)) / (np.std(x_test, axis=0) + 1e-8)
+#     x_train, x_test = map(normalize_scheme, [x_train, x_test])
+
+#     return x_train, y_train, x_test, y_test
 
 
 def read_weights(file, weight_label: str = "last_params") -> list[np.ndarray[:, :]]:
-    with open(file) as f:
+    """
+    Load a list of weight matrices from a JSON file.
+
+    Parameters
+    ----------
+    file : str or pathlib.Path
+        Path to the JSON file that contains saved weight parameters.
+    weight_label : str, optional
+        The key in the JSON object under which the weight matrices are stored.
+        Defaults to "last_params".
+
+    Returns
+    -------
+    List[np.ndarray]
+        A list of 2D NumPy arrays corresponding to the weight matrices
+        loaded from the JSON. Each entry in the returned list is one matrix.
+
+    Raises
+    ------
+    FileNotFoundError
+        If the specified file does not exist.
+    json.JSONDecodeError
+        If the file is not valid JSON.
+    KeyError
+        If `weight_label` is not found in the JSON data.
+    """
+
+    with open(file, "r") as f:
         data = json.load(f)
 
     return data[weight_label]
