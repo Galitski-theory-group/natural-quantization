@@ -1,6 +1,6 @@
-import datetime
 import json
 import os
+
 import numpy as np
 from qiskit import ClassicalRegister, QuantumCircuit, QuantumRegister
 from qiskit.transpiler import generate_preset_pass_manager
@@ -8,11 +8,11 @@ from qiskit_ibm_runtime import QiskitRuntimeService, RuntimeEncoder
 from qiskit_ibm_runtime import SamplerV2 as Sampler
 from qiskit_ibm_runtime.fake_provider import FakeKyiv
 
-
 # TODO: enforce one classical data type
 # TODO: make sure we select qubits with furthest connectivity
 # TODO : pytorch mnist dataset
 # TODO : add number of blocks per instance
+
 
 class QuantumNeuralNetwork:
 
@@ -77,21 +77,23 @@ class QuantumNeuralNetwork:
         optimization_level=1,
     ) -> None:
         """
-        Initialize Qiskit runtime service, select a backend, and configure the communications
-        pass manager.
+        Initialize Qiskit runtime service, select a backend, and configure
+        the communications pass manager.
 
-        This method logs into the IBM Qiskit runtime service, chooses the least-busy backend
-        supporting sessions and measurements (either a simulator or a real device), and
-        generates a preset pass manager with the specified optimization level for compiling
-        circuits.
+        This method logs into the IBM Qiskit runtime service, chooses the
+        least-busy backend supporting sessions and measurements (either a
+        simulator or a real device), and generates a preset pass manager with
+        the specified optimization level for compiling circuits.
 
         Parameters
         ----------
         simulation_mode : bool, optional
-            Whether to prefer a simulator backend (True) or a real device (False). Default is
+            Whether to prefer a simulator backend (True) or a real device
+            (False). Default is
             True.
         operational : bool, optional
-            Whether to restrict selection to operational (online) backends (True) or include
+            Whether to restrict selection to operational (online) backends
+            (True) or include
             offline ones (False). Default is True.
         optimization_level : int, optional
             The optimization level (0–3) for the communications pass manager.
@@ -101,7 +103,8 @@ class QuantumNeuralNetwork:
         Raises
         ------
         ConnectionError
-            If initializing QiskitRuntimeService or selecting the backend fails.
+            If initializing QiskitRuntimeService or selecting the backend
+            fails.
         RuntimeError
             If generating the communications pass manager fails.
         """
@@ -114,7 +117,6 @@ class QuantumNeuralNetwork:
 
         # Only run this block if NOT in simulation mode
         try:
-            from qiskit_ibm_runtime import QiskitRuntimeService
             self.service = QiskitRuntimeService()
         except Exception as e:
             raise ConnectionError("Failed to initialize QiskitRuntimeService.") from e
@@ -131,7 +133,9 @@ class QuantumNeuralNetwork:
                 backend=self.backend, optimization_level=optimization_level
             )
         except Exception as e:
-            raise RuntimeError("Failed to generate the communications pass manager.") from e
+            raise RuntimeError(
+                "Failed to generate the communications pass manager."
+            ) from e
 
     def feedforward(
         self: "QuantumNeuralNetwork",
@@ -220,15 +224,14 @@ class QuantumNeuralNetwork:
             # print("bit-string -> array:", zs)
             # set 0 to 1, 1 to -1
             zs = np.where(zs == 0, 1, -1)
-            # print("activations:", zs)
+            zs = (
+                zs
+                if n_blocks == 1
+                else [zs[i : i + n_qbits] for i in range(0, len(zs), n_qbits)]
+            )  # print("activations:", zs)
 
         # apply softmax to final layer
         # print("final pre-activation:", zs)
-        zs = (
-            zs
-            if n_blocks == 1
-            else [zs[i : i + n_qbits] for i in range(0, len(zs), n_qbits)]
-        )
 
         if n_blocks == 1:
             output = np.exp(self.weights[-1] @ zs) / sum(np.exp(self.weights[-1] @ zs))
@@ -240,7 +243,7 @@ class QuantumNeuralNetwork:
         # print("output:",output)
         return output
 
-    def predict(
+    def image_block_predict(
         self,
         Xs,
         quantumness=0.5,
@@ -271,32 +274,89 @@ class QuantumNeuralNetwork:
             A flat list of output probability vectors from all runs, with length equal to
             `len(Xs) * n_samples`. Each element is the softmax output of one forward pass.
         """
-        assert len(Xs)%n_instances_per_block == 0
-        try:
-            output = []
-            n = n_instances_per_block
-            chunks = Xs if n == 1 else [Xs[i : i + n] for i in range(0, len(Xs), n)]
-            for chunk in chunks:
-                per_instance = []
-                for i in range(n_samples):
-                    tmp = self.feedforward(
-                        chunk, quantumness=quantumness, save_bitstring_to=save_bitstring_to
-                    )
-                    argmaxes = (
-                        np.argmax(tmp) if n_instances_per_block == 1 else np.argmax(tmp, axis=1)
-                    )
-                    print(argmaxes)
-                    per_instance.append(argmaxes)
-                    if f:
-                        with open(save_results_to, "a") as f:
-                            json.dump([list(chunk), list(tmp)], f, indent=2)
-                            f.write("\n")
-                            f.flush()
-                            os.fsync(f.fileno())
+        assert len(Xs) % n_instances_per_block == 0
+        output = []
+        n = n_instances_per_block
+        chunks = Xs if n == 1 else [Xs[i : i + n] for i in range(0, len(Xs), n)]
+        print(f"n_chunks:{len(chunks)}")
+        for chunk in chunks:
+            print(f"n_chunk:{len(chunk)}")
+            per_instance = []
+            for i in range(n_samples):
+                tmp = self.feedforward(
+                    chunk, quantumness=quantumness, save_bitstring_to=save_bitstring_to
+                )
+                argmaxes = (
+                    np.argmax(tmp)
+                    if n_instances_per_block == 1
+                    else np.argmax(tmp, axis=1)
+                )
+                print(argmaxes)
+                per_instance.append(argmaxes)
+                if save_results_to:
+                    with open(save_results_to, "a") as f:
+                        json.dump(
+                            [[list(c) for c in chunk], [list(t) for t in tmp]],
+                            f,
+                            indent=2,
+                        )
+                        f.write("\n")
+                        f.flush()
+                        os.fsync(f.fileno())
                 output.append(per_instance)
 
-        finally:
-            if f:
-                f.close()
+        return output
 
+    def sample_block_predict(
+        self,
+        Xs,
+        quantumness=0.5,
+        n_samples=10,
+        n_samples_per_block=1,
+        save_bitstring_to: bool = False,
+        save_results_to: str = None,
+    ) -> list[np.ndarray[:]]:
+        """
+        Generate multiple stochastic predictions for each input using the hybrid
+        quantum–classical network.
+
+        Parameters
+        ----------
+        Xs : Iterable[np.ndarray]
+            A collection of input vectors to predict on. Each element should be a 1D numpy array
+            matching the network's input dimension.
+        quantumness : float, optional
+            Interpolation parameter between purely classical (0.0) and fully quantum (1.0
+            hidden-layer
+            activations. Defaults to 0.5.
+        n_samples : int, optional
+            Number of stochastic forward passes to perform per input. Defaults to 10.
+
+        Returns
+        -------
+        list[np.ndarray]
+            A flat list of output probability vectors from all runs, with length equal to
+            `len(Xs) * n_samples`. Each element is the softmax output of one forward pass.
+        """
+        assert n_samples % n_samples_per_block == 0
+        n_blocks = n_samples // n_samples_per_block
+        output = []
+        for x in Xs:
+            per_instance = []
+            for _ in range(n_blocks):
+                copies_of_instance = [np.copy(x) for _ in range(n_samples_per_block)]
+                tmp = self.feedforward(
+                    copies_of_instance,
+                    quantumness=quantumness,
+                    save_bitstring_to=save_bitstring_to,
+                )
+                argmaxes = np.argmax(tmp) if n_samples == 1 else np.argmax(tmp, axis=1)
+                per_instance.append(argmaxes)
+                if save_results_to:
+                    with open(save_results_to, "a") as f:
+                        json.dump([x.tolist(), [list(t) for t in tmp]], f, indent=2)
+                        f.write("\n")
+                        f.flush()
+                        os.fsync(f.fileno())
+            output.append(per_instance)
         return output
