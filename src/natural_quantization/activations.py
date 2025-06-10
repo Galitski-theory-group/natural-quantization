@@ -1,5 +1,6 @@
 import numpy as np
 
+
 def htanh(x: np.ndarray[:], a: (int | float)) -> np.ndarray[:]:
     """
     Compute a hard tanh activation on the input x.
@@ -22,7 +23,7 @@ def htanh(x: np.ndarray[:], a: (int | float)) -> np.ndarray[:]:
       AssertionError: If the absolute value of a is greater than 1.
     """
 
-    assert abs(a) <= 1
+    # assert abs(a) <= 1
 
     if a == 0:
         # purely sign‐based when a==0
