@@ -84,6 +84,45 @@ def one_hot(digit: int, length: int = 10) -> np.ndarray:
 
 #     return x_train, y_train, x_test, y_test
 
+def prepare_data_from_file(
+    file_path: str = "/Users/dlakhdar/physics/copy_repos/natural-quantization/data/mnist_data/mnist_data_reduced.json",
+    n_samples: int = None,
+    indices: list[int] = None
+) -> tuple[list[np.ndarray], list[np.ndarray]]:
+    """
+    Load MNIST test data from JSON and optionally return only a subset.
+
+    Args:
+        file_path: path to the JSON file containing {"test_set": 
+        [[pixels, label], ...]}.
+        n_samples: number of random examples to draw 
+        (ignored if `indices` provided).
+        indices: explicit list of indices to select.
+
+    Returns:
+        Either the full (x_test, y_test) or the sampled (x_sample, y_sample).
+    """
+    # 1) load and build full test set
+    with open(file_path, "r") as f:
+        image_data = json.load(f)
+
+    test_set = image_data["test_set"]
+    x_test = [np.array(entry[0]) for entry in test_set]
+    y_test = [one_hot(entry[1]) for entry in test_set]
+
+    # 2) decide which indices to use
+    if indices is not None:
+        pick = indices
+    elif n_samples is not None:
+        pick = np.random.choice(len(x_test), size=n_samples, replace=False).tolist()
+    else:
+        return x_test, y_test
+
+    # 3) slice out the subset
+    x_sample = [x_test[i] for i in pick]
+    y_sample = [y_test[i] for i in pick]
+    return x_sample, y_sample
+
 
 def read_weights(file, weight_label: str = "last_params") -> list[np.ndarray[:, :]]:
     """
