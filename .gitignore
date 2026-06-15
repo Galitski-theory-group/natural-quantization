@@ -6,7 +6,5 @@
 *out
 *err
 build
-data/zaratan/*
 check_copy.sh
 check_structure.sh
-data/*
