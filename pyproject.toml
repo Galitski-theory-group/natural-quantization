@@ -16,11 +16,12 @@ classifiers = [
     "Environment :: Console",
     "Intended Audience :: Developers",
     "Operating System :: OS Independent",
-    "Programming Language :: Python",
+    "Programming Language :: Pythosn",
     "Topic :: Utilities",
 ]
 
 dependencies = [
+    "typer",
     "ipykernel",
     "matplotlib",
     "numpy",

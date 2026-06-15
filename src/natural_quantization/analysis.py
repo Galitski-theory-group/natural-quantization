@@ -1,3 +1,5 @@
+import itertools
+
 import numpy as np
 import scipy.stats as stats
 
@@ -45,6 +47,20 @@ def calculate_validation_rate(
     return accuracy
 
 
+def mode_of_nested_list(list_of_lists: list[list[list[float]]]) -> list[int]:
+    """
+    For each sub‐list `l` in `list_of_lists`:
+      1. Compute argmax of each inner list `l'`.
+      2. Take the statistical mode of those argmaxes.
+    Returns a list of one mode‐index per `l`.
+    """
+    modes = []
+    for l_ in list_of_lists:
+        mode_idx = int(stats.mode(l_)[0])
+        modes.append(mode_idx)
+    return modes
+
+
 def mode_of_argmaxes(list_of_lists: list[list[list[float]]]) -> list[int]:
     """
     For each sub‐list `l` in `list_of_lists`:
@@ -60,6 +76,39 @@ def mode_of_argmaxes(list_of_lists: list[list[list[float]]]) -> list[int]:
         mode_idx = int(stats.mode(argmaxes)[0])
         modes.append(mode_idx)
     return modes
+
+
+def error_of_argmaxes(list_of_lists: list[list[list[float]]]) -> list[int]:
+    """
+    For each sub‐list `l` in `list_of_lists`:
+      1. Compute argmax of each inner list `l'`.
+      2. Take the statistical mode of those argmaxes.
+    Returns a list of one mode‐index per `l`.
+    """
+    modes = []
+    for l_ in list_of_lists:
+        # 1) argmax of each l'
+        argmaxes = [int(np.argmax(l_prime)) for l_prime in l_]
+        # 2)most common
+        mode_idx = int(stats.mode(argmaxes)[0])
+        modes.append(mode_idx)
+    return modes
+
+
+def concat_positionwise(seven_lists):
+    """
+    Given a list of length-N, where each element is itself a list of 7 lists,
+    returns a new list of 7 lists where position i is the concatenation of
+    all the i-th lists from each element of seven_lists.
+    """
+    # zip(*seven_lists) will yield 7 tuples; each tuple is (x[0], y[0], z[0], …), then (x[1], y[1], z[1], …), etc.
+    result = []
+    for group in zip(*seven_lists):
+        # `group` is a tuple of lists: (first_list_from_all, second_list_from_all, …)
+        # chain.from_iterable flattens it into a single iterator; then list(…) makes it back into a list.
+        concatenated = list(itertools.chain.from_iterable(group))
+        result.append(concatenated)
+    return result
 
 
 def run_single_image_classification_analysis(As=As, files=files, true_index=2):

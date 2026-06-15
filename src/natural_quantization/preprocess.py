@@ -84,18 +84,19 @@ def one_hot(digit: int, length: int = 10) -> np.ndarray:
 
 #     return x_train, y_train, x_test, y_test
 
+
 def prepare_data_from_file(
     file_path: str = "/Users/dlakhdar/physics/copy_repos/natural-quantization/data/mnist_data/mnist_data_reduced.json",
     n_samples: int = None,
-    indices: list[int] = None
+    indices: list[int] = None,
 ) -> tuple[list[np.ndarray], list[np.ndarray]]:
     """
     Load MNIST test data from JSON and optionally return only a subset.
 
     Args:
-        file_path: path to the JSON file containing {"test_set": 
+        file_path: path to the JSON file containing {"test_set":
         [[pixels, label], ...]}.
-        n_samples: number of random examples to draw 
+        n_samples: number of random examples to draw
         (ignored if `indices` provided).
         indices: explicit list of indices to select.
 
